@@ -1,0 +1,10 @@
+[project]
+name = "smol-lm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ipykernel>=7.2.0",
+    "jupytext>=1.19.1",
+]
