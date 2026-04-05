@@ -1,2 +1,3 @@
 ipykernel
 jupytext
+torch
