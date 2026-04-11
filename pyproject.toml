@@ -9,3 +9,14 @@ dependencies = [
     "jupytext>=1.19.1",
     "torch>=2.11.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.2.0",
+    "ipython>=9.10.1",
+    "jupyter-client>=8.8.0",
+    "jupytext>=1.19.1",
+    "pillow>=12.2.0",
+    "pynvim>=0.6.0",
+    "pyperclip>=1.11.0",
+]
