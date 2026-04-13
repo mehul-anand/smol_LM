@@ -100,6 +100,19 @@ class Head(nn.Module):
         return out
 
 
+class MultiHeadAttention(nn.Module):
+    # multiple attention heads of self-attention in parallel
+    def __init__(self, num_heads, head_size):
+        super().__init__()
+        # running them in parallel
+        self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
+
+    def forward(self, x):
+        # concatinating the outputs
+        return torch.cat([h(x) for h in self.heads], dim=-1)
+        # dim=-1 -> channel (C) dimension
+
+
 # super simple bigram model
 class BigramLanguageModel(nn.Module):
     def __init__(self):
@@ -109,6 +122,11 @@ class BigramLanguageModel(nn.Module):
         # pos_embedding part
         self.position_embedding_table = nn.Embedding(block_size, n_embed)
         self.sa_head = Head(n_embed)
+        self.sa_heads = MultiHeadAttention(
+            4, n_embed // 4
+        )  # i.e. 4 heads of 8-dimensional self-attention
+        # 4 * 8 = 32 -> original n_embed
+        # this is like group convulutional
         self.lm_head = nn.Linear(n_embed, vocab_size)
 
     def forward(self, idx, targets=None):
@@ -121,7 +139,7 @@ class BigramLanguageModel(nn.Module):
         new_emb = (
             tok_emb + pos_emb
         )  # (B,T,C) [a new dimension of B is added to make the addition make sense and it is broadcasted back]
-        new_emb = self.sa_head(new_emb)
+        new_emb = self.sa_heads(new_emb)
         logits = self.lm_head(new_emb)  # (B,T,vocab_size)
         # bug: <fix> use self.lm_head instead of self.token_embedding_table to project to vocab_size
 
