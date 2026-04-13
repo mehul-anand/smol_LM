@@ -5,9 +5,9 @@ from torch.nn import functional as F
 # hyperparameters
 batch_size = 32  # how many independent sequences will we process in parallel?
 block_size = 8  # what is the maximum context length for predictions?
-max_iters = 3000
-eval_interval = 300
-learning_rate = 1e-2
+max_iters = 5000
+eval_interval = 500
+learning_rate = 1e-3
 # check wether GPU is available on the device or not
 device = "cuda" if torch.cuda.is_available() else "cpu"
 # for evaluation iterations
@@ -72,15 +72,43 @@ def estimate_loss():
     return out
 
 
+# implementing self-attention block
+class Head(nn.Module):
+    tril: torch.Tensor
+
+    # one head of self-attention
+    def __init__(self, head_size):
+        super().__init__()
+        self.key = nn.Linear(n_embed, head_size, bias=False)
+        self.query = nn.Linear(n_embed, head_size, bias=False)
+        self.value = nn.Linear(n_embed, head_size, bias=False)
+        self.register_buffer("tril", torch.tril(torch.ones(block_size, block_size)))
+        # tril is not a parameter of the PyTorch module and so we use a register_buffer
+
+    def forward(self, x):
+        B, T, C = x.shape
+        k = self.key(x)  # (B,T,C)
+        q = self.query(x)  # (B,T,C)
+        # compute affinities/attention scores
+        wei = q @ k.transpose(-2, -1) * C**-0.5  # (B,T,C) @ (B,C,T) -> (B,T,T)
+        wei = wei.masked_fill(
+            self.tril[:T, :T] == 0, float("-inf")
+        )  # for masking the future values (B,T,T)
+        wei = F.softmax(wei, dim=-1)  # (B,T,T)
+        v = self.value(x)  # (B,T,C)
+        out = wei @ v  # (B,T,T) @ (B,T,C) -> (B,T,C)
+        return out
+
+
 # super simple bigram model
 class BigramLanguageModel(nn.Module):
-
     def __init__(self):
         super().__init__()
         # each token directly reads off the logits for the next token from a lookup table
         self.token_embedding_table = nn.Embedding(vocab_size, n_embed)
         # pos_embedding part
         self.position_embedding_table = nn.Embedding(block_size, n_embed)
+        self.sa_head = Head(n_embed)
         self.lm_head = nn.Linear(n_embed, vocab_size)
 
     def forward(self, idx, targets=None):
@@ -93,14 +121,17 @@ class BigramLanguageModel(nn.Module):
         new_emb = (
             tok_emb + pos_emb
         )  # (B,T,C) [a new dimension of B is added to make the addition make sense and it is broadcasted back]
-        logits = self.token_embedding_table(new_emb)  # (B,T,vocab_size)
+        new_emb = self.sa_head(new_emb)
+        logits = self.lm_head(new_emb)  # (B,T,vocab_size)
+        # bug: <fix> use self.lm_head instead of self.token_embedding_table to project to vocab_size
 
         if targets is None:
             loss = None
         else:
             B, T, C = logits.shape
             logits = logits.view(B * T, C)
-            self.lm_head = nn.Linear(n_embed, vocab_size)
+            # self.lm_head = nn.Linear(n_embed, vocab_size)
+            # bug: <fix> remove this line - lm_head is already initialized in __init__, recreating it here creates duplicate parameters
             targets = targets.view(B * T)
             loss = F.cross_entropy(logits, targets)
 
@@ -109,8 +140,11 @@ class BigramLanguageModel(nn.Module):
     def generate(self, idx, max_new_tokens):
         # idx is (B, T) array of indices in the current context
         for _ in range(max_new_tokens):
+            # crop the idx to the last block_size tokens so that it does not run out of scope
+            idx_cond = idx[:, -block_size:]
+            # bug: <fix> should be idx[:, -block_size:] to crop last block_size tokens, not idx[:, block_size] which indexes a single column
             # get the predictions
-            logits, loss = self(idx)
+            logits, loss = self(idx_cond)
             # focus only on the last time step
             logits = logits[:, -1, :]  # becomes (B, C)
             # apply softmax to get probabilities
@@ -129,7 +163,6 @@ m = model.to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 for iter in range(max_iters):
-
     # every once in a while evaluate the loss on train and val sets
     if iter % eval_interval == 0:
         losses = estimate_loss()
