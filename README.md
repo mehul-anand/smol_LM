@@ -9,5 +9,6 @@ kind of like, showing the thinking process of why do we do this and why do we do
 ## TODOS:
 
 - implement self attention in the bigram model [DONE]
-- implement multi head attention
+- implement multi head attention [DONE]
+- feed forward layers of the transformer block
 - make a tokenizer from scratch
