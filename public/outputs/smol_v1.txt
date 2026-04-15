@@ -1,0 +1,26 @@
+Using device: cuda
+step 0: train loss 4.2849, val loss 4.2823
+step 500: train loss 1.9751, val loss 2.0696
+step 1000: train loss 1.5553, val loss 1.7388
+step 1500: train loss 1.3954, val loss 1.5966
+step 2000: train loss 1.3032, val loss 1.5439
+step 2500: train loss 1.2399, val loss 1.5112
+step 3000: train loss 1.1864, val loss 1.4994
+step 3500: train loss 1.1381, val loss 1.4903
+step 4000: train loss 1.0953, val loss 1.4963
+step 4500: train loss 1.0462, val loss 1.4959
+
+--- Generated Output ---
+
+Of bloody proud condemn'd Auria:
+it is not pity, or madaste a clerpt this:
+The candainty knight, as they say 'tis stay;
+But I have learn'd that time spicely as you
+With any thing coo banished: I do reve him,
+In shall be a baggan at this dream
+Hot all the cast of Paatal little in encounter;
+So it would pray for Hastings and frainty,
+Aare my son black unto them near on gauter,
+And beg them lighty to me. See, O mighty day's tose
+The prince, pomps of our lap of pilece,
+Or one pardonable of your lips
