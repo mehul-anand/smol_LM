@@ -12,6 +12,8 @@ kind of like, showing the thinking process of why do we do this and why do we do
 - implement multi head attention [DONE]
 - feed forward layers of the transformer block [DONE]
 - make a tokenizer from scratch
+- write a blog on this
+- try a bigger dataset
 
 ## PS :
 
