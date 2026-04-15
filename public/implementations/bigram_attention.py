@@ -3,8 +3,8 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 # hyperparameters
-batch_size = 32  # how many independent sequences will we process in parallel?
-block_size = 8  # what is the maximum context length for predictions?
+batch_size = 32
+block_size = 8 
 max_iters = 5000
 eval_interval = 500
 learning_rate = 1e-3
@@ -21,19 +21,16 @@ torch.manual_seed(1337)
 with open("test_notebooks/data/input.txt", "r", encoding="utf-8") as f:
     text = f.read()
 
-# here are all the unique characters that occur in this text
 chars = sorted(list(set(text)))
 vocab_size = len(chars)
-# create a mapping from characters to integers
 stoi = {ch: i for i, ch in enumerate(chars)}
 itos = {i: ch for i, ch in enumerate(chars)}
 encode = lambda s: [
     stoi[c] for c in s
-]  # encoder: take a string, output a list of integers
+] 
 decode = lambda l: "".join(
     [itos[i] for i in l]
-)  # decoder: take a list of integers, output a string
-
+) 
 # Train and test splits
 data = torch.tensor(encode(text), dtype=torch.long)
 n = int(0.9 * len(data))  # first 90% will be train, rest val
@@ -113,6 +110,16 @@ class MultiHeadAttention(nn.Module):
         # dim=-1 -> channel (C) dimension
 
 
+class FeedForward(nn.Module):
+    # a linear layer followed by non
+    def __init__(self, n_embed):
+        super().__init__()
+        self.net = nn.Sequential(nn.Linear(n_embed, n_embed), nn.ReLU())
+
+        def forward(self, x):
+            return self.net(x)
+
+
 # super simple bigram model
 class BigramLanguageModel(nn.Module):
     def __init__(self):
@@ -124,9 +131,8 @@ class BigramLanguageModel(nn.Module):
         self.sa_head = Head(n_embed)
         self.sa_heads = MultiHeadAttention(
             4, n_embed // 4
-        )  # i.e. 4 heads of 8-dimensional self-attention
-        # 4 * 8 = 32 -> original n_embed
-        # this is like group convulutional
+        )
+        self.ffwd = FeedForward(n_embed)
         self.lm_head = nn.Linear(n_embed, vocab_size)
 
     def forward(self, idx, targets=None):
@@ -138,10 +144,9 @@ class BigramLanguageModel(nn.Module):
         pos_emb = self.position_embedding_table(torch.arange(T, device=device))  # (T,C)
         new_emb = (
             tok_emb + pos_emb
-        )  # (B,T,C) [a new dimension of B is added to make the addition make sense and it is broadcasted back]
+        )
         new_emb = self.sa_heads(new_emb)
         logits = self.lm_head(new_emb)  # (B,T,vocab_size)
-        # bug: <fix> use self.lm_head instead of self.token_embedding_table to project to vocab_size
 
         if targets is None:
             loss = None
@@ -158,18 +163,11 @@ class BigramLanguageModel(nn.Module):
     def generate(self, idx, max_new_tokens):
         # idx is (B, T) array of indices in the current context
         for _ in range(max_new_tokens):
-            # crop the idx to the last block_size tokens so that it does not run out of scope
             idx_cond = idx[:, -block_size:]
-            # bug: <fix> should be idx[:, -block_size:] to crop last block_size tokens, not idx[:, block_size] which indexes a single column
-            # get the predictions
             logits, loss = self(idx_cond)
-            # focus only on the last time step
             logits = logits[:, -1, :]  # becomes (B, C)
-            # apply softmax to get probabilities
             probs = F.softmax(logits, dim=-1)  # (B, C)
-            # sample from the distribution
             idx_next = torch.multinomial(probs, num_samples=1)  # (B, 1)
-            # append sampled index to the running sequence
             idx = torch.cat((idx, idx_next), dim=1)  # (B, T+1)
         return idx
 
